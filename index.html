@@ -99,19 +99,6 @@
             const errors = y.map((val, i) => m * X[i] + b - val);
             const rmse = calculateRMSE(y, yPred);
 
-            // Update 2D plot with error bars
-            const errorBars = y.map((val, i) => {
-                return {
-                    type: 'data',
-                    array: [val - (m * X[i] + b)],
-                    visible: true,
-                    thickness: 1,
-                    width: 1,
-                    color: 'rgba(0,0,255,0.3)', // Change back to blue
-                    symmetric: false
-                };
-            });
-
             const trace2D = [{
                 x: X,
                 y: y,
@@ -120,6 +107,7 @@
                 error_y: {
                     type: 'data',
                     array: errors,
+                    name: 'Error Bars',
                     visible: true,
                     thickness: 1,
                     width: 1,
