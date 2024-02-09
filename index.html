@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression with Interactive Sliders</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        #title {
+            text-align: center;
+            font-size: 50px;
+            color: cornflowerblue;
+            margin-bottom: 50px;
+        }
+
+        #container {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #left-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50%;
+            padding: 20px;
+        }
+
+        #right-container {
+            width: 50%;
+            padding: 20px;
+        }
+
+        #2d-plot {
+            width: 100%;
+            height: 50%;
+        }
+
+        #3d-plot {
+            width: 100%;
+            margin-top: 40px;
+        }
+
+        .slider {
+            margin-bottom: 10px;
+        }
+
+        .slider-value {
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">Linear Regression with Cost Function</div>
+
+    <div id="container">
+        <div id="left-container">
+            <div id="sliders">
+                <label for="slope">Slope (m):</label>
+                <input type="range" min="-10" max="10" step="0.1" value="3" class="slider" id="slope">
+                <span id="slope-value" class="slider-value">3</span>
+                <br>
+                <label for="intercept">Intercept (b):</label>
+                <input type="range" min="-10" max="10" step="0.1" value="4" class="slider" id="intercept">
+                <span id="intercept-value" class="slider-value">4</span>
+            </div>
+            <div id="3d-plot"></div>
+        </div>
+        <div id="right-container">
+            <div id="2d-plot"></div>
+        </div>
+    </div>
+
+    <script>
+        // Generate sample data
+        const X = Array.from({ length: 100 }, () => Math.random() * 2);
+        const y = X.map(val => 4 + 3 * val + Math.random());
+
+        // Keep track of slider values and RMSE
+        const sliderValues = [];
+        const RMSEValues = [];
+
+        // Function to calculate RMSE
+        function calculateRMSE(yTrue, yPred) {
+            return Math.sqrt(yTrue.reduce((acc, val, index) => acc + Math.pow(val - yPred[index], 2), 0) / yTrue.length);
+        }
+
+        // Function to update plot
+        function updatePlot(m, b) {
+            const yPred = X.map(val => m * val + b);
+            const errors = y.map((val, i) => m * X[i] + b - val);
+            const rmse = calculateRMSE(y, yPred);
+
+            // Update 2D plot with error bars
+            const errorBars = y.map((val, i) => {
+                return {
+                    type: 'data',
+                    array: [val - (m * X[i] + b)],
+                    visible: true,
+                    thickness: 1,
+                    width: 1,
+                    color: 'rgba(0,0,255,0.3)', // Change back to blue
+                    symmetric: false
+                };
+            });
+
+            const trace2D = [{
+                x: X,
+                y: y,
+                mode: 'markers',
+                name: 'Data',
+                error_y: {
+                    type: 'data',
+                    array: errors,
+                    visible: true,
+                    thickness: 1,
+                    width: 1,
+                    color: 'rgba(255,0,0,0.3)',
+                    symmetric: false
+                }
+            }, {
+                x: X,
+                y: yPred,
+                mode: 'lines',
+                name: 'Regression Line'
+            }];
+            const layout2D = {
+                title: `RMSE: ${rmse.toFixed(2)}`,
+                xaxis: {
+                    title: 'X'
+                },
+                yaxis: {
+                    title: 'y'
+                },
+                width: '100%',
+                height: '100%'
+            };
+            Plotly.newPlot('2d-plot', trace2D, layout2D);
+
+            // Store slider values and RMSE
+            sliderValues.push([m, b]);
+            RMSEValues.push(rmse);
+
+            // Update 3D plot
+            const trace3D = {
+                x: sliderValues.map(pair => pair[0]),
+                y: sliderValues.map(pair => pair[1]),
+                z: RMSEValues,
+                mode: 'lines+markers',
+                type: 'scatter3d',
+                marker: {
+                    size: 5,
+                    color: RMSEValues,
+                    colorscale: 'Viridis',
+                    opacity: 0.8
+                }
+            };
+
+            const layout3D = {
+                title: 'Cost Function',
+                scene: {
+                    xaxis: { title: 'Slope (m)' },
+                    yaxis: { title: 'Intercept (b)' },
+                    zaxis: { title: 'RMSE' },
+                    camera: { 
+                        eye: {
+                            x: 1, 
+                            y: 1, 
+                            z: 1
+                        }
+                    }
+                },
+                width: 500, // Change width to desired value
+                height: 500 // Change height to desired value
+            };
+            Plotly.newPlot('3d-plot', [trace3D], layout3D);
+        }
+
+        // Initial values for slope (m) and y-intercept (b)
+        let initialSlope = 3;
+        let initialIntercept = 4;
+
+        // Get sliders and slider values
+        const slopeSlider = document.getElementById('slope');
+        const slopeValue = document.getElementById('slope-value');
+        const interceptSlider = document.getElementById('intercept');
+        const interceptValue = document.getElementById('intercept-value');
+
+        // Update plot when sliders change
+        slopeSlider.addEventListener('input', () => {
+            initialSlope = parseFloat(slopeSlider.value);
+            slopeValue.textContent = initialSlope.toFixed(1);
+            updatePlot(initialSlope, initialIntercept);
+        });
+
+        interceptSlider.addEventListener('input', () => {
+            initialIntercept = parseFloat(interceptSlider.value);
+            interceptValue.textContent = initialIntercept.toFixed(1);
+            updatePlot(initialSlope, initialIntercept);
+        });
+
+        // Initial plot
+        updatePlot(initialSlope, initialIntercept);
+    </script>
+</body>
+</html>
